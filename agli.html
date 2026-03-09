@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birthday Secret</title>
+
+<style>
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+overflow:hidden;
+font-family:monospace;
+background:#0b1a2f;
+color:white;
+}
+
+.page{
+position:fixed;
+width:100%;
+height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+transition:opacity 1s;
+}
+
+.hidden{
+opacity:0;
+pointer-events:none;
+}
+
+.dotbg{
+position:absolute;
+width:8px;
+height:8px;
+background:rgba(255,255,255,0.15);
+border-radius:50%;
+}
+
+.pinTitle{
+font-size:22px;
+margin-bottom:25px;
+}
+
+.dots{
+display:flex;
+gap:14px;
+z-index:2;
+}
+
+.dot{
+width:20px;
+height:20px;
+background:#203e63;
+border-radius:50%;
+}
+
+.dot.filled{
+background:#3ea6ff;
+transform:scale(1.4);
+}
+
+#pinInput{
+opacity:0;
+position:absolute;
+}
+
+#errorMsg{
+margin-top:20px;
+color:#ff8080;
+}
+
+.loadingBar{
+width:240px;
+height:14px;
+background:#1b3354;
+border-radius:10px;
+overflow:hidden;
+}
+
+.bar{
+height:100%;
+width:0%;
+background:linear-gradient(90deg,#3ea6ff,#7cc6ff);
+animation:load 5s linear forwards;
+}
+
+@keyframes load{
+0%{width:0}
+100%{width:100%}
+}
+
+#scene{background:#000015;}
+
+canvas{image-rendering:pixelated;}
+
+#benchBtn{
+position:absolute;
+bottom:140px;
+left:50%;
+transform:translateX(-50%);
+width:140px;
+height:90px;
+cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="pinPage" class="page">
+
+<div class="pinTitle">Enter Secret Code</div>
+
+<div class="dots">
+<div class="dot"></div>
+<div class="dot"></div>
+<div class="dot"></div>
+<div class="dot"></div>
+<div class="dot"></div>
+<div class="dot"></div>
+</div>
+
+<div id="errorMsg"></div>
+
+<input id="pinInput" maxlength="6">
+
+</div>
+
+<div id="loadingPage" class="page hidden">
+
+<div class="loadingBar">
+<div class="bar"></div>
+</div>
+
+<div style="margin-top:20px">tunggu ya...</div>
+
+</div>
+
+<div id="scene" class="page hidden">
+
+<canvas id="canvas"></canvas>
+<div id="benchBtn"></div>
+
+</div>
+
+<script>
+
+/* ================= PIN SYSTEM ================= */
+
+const correctPin="654321"
+
+const input=document.getElementById("pinInput")
+const dots=document.querySelectorAll(".dot")
+
+const pinPage=document.getElementById("pinPage")
+const loadingPage=document.getElementById("loadingPage")
+const scene=document.getElementById("scene")
+const errorMsg=document.getElementById("errorMsg")
+
+document.body.addEventListener("click",()=>input.focus())
+
+input.addEventListener("input",()=>{
+
+let val=input.value
+
+dots.forEach((d,i)=>{
+if(i<val.length)d.classList.add("filled")
+else d.classList.remove("filled")
+})
+
+if(val.length===6){
+
+if(val===correctPin){
+
+confetti()
+
+setTimeout(()=>{
+
+pinPage.classList.add("hidden")
+loadingPage.classList.remove("hidden")
+
+setTimeout(()=>{
+loadingPage.classList.add("hidden")
+scene.classList.remove("hidden")
+initScene()
+},5000)
+
+},1200)
+
+}else{
+
+errorMsg.innerText="waduh, salah nih"
+input.value=""
+dots.forEach(d=>d.classList.remove("filled"))
+
+}
+
+}
+
+})
+
+/* ================= CONFETTI ================= */
+
+function confetti(){
+
+let cx=window.innerWidth/2
+let cy=window.innerHeight/2
+
+for(let i=0;i<150;i++){
+
+let c=document.createElement("div")
+
+c.style.position="fixed"
+c.style.width="6px"
+c.style.height="6px"
+
+let colors=["#ff4d4d","#ffd24d","#4dff88","#4dc3ff","#ffffff","#ff7aff"]
+
+c.style.background=colors[Math.floor(Math.random()*colors.length)]
+
+c.style.left=cx+"px"
+c.style.top=cy+"px"
+
+document.body.appendChild(c)
+
+let angle=Math.random()*Math.PI*2
+let speed=3+Math.random()*4
+
+let vx=Math.cos(angle)*speed
+let vy=Math.sin(angle)*speed
+
+let gravity=0.1
+
+function fall(){
+
+cx=parseFloat(c.style.left)
+cy=parseFloat(c.style.top)
+
+vx*=0.99
+vy+=gravity
+
+c.style.left=(cx+vx)+"px"
+c.style.top=(cy+vy)+"px"
+
+if(cy>window.innerHeight){
+c.remove()
+}else{
+requestAnimationFrame(fall)
+}
+
+}
+
+fall()
+
+}
+
+}
+
+/* ================= CANVAS ================= */
+
+const canvas=document.getElementById("canvas")
+const ctx=canvas.getContext("2d")
+
+let w,h
+
+function resize(){
+w=canvas.width=window.innerWidth
+h=canvas.height=window.innerHeight
+}
+
+resize()
+window.addEventListener("resize",resize)
+
+/* ================= STARS ================= */
+
+let stars=[]
+
+for(let i=0;i<120;i++){
+
+stars.push({
+x:Math.random()*w,
+y:Math.random()*h/2,
+speed:.3+Math.random()*0.5
+})
+
+}
+
+/* ================= GRASS ================= */
+
+let grass=[]
+let flowers=[]
+
+for(let i=0;i<400;i++){
+
+grass.push({
+x:Math.random()*window.innerWidth,
+height:5+Math.random()*8,
+offset:Math.random()*10
+})
+
+}
+
+let flowerColors=["#ff4d4d","#ffffff","#ffd24d"]
+
+for(let i=0;i<40;i++){
+
+flowers.push({
+x:Math.random()*window.innerWidth,
+color:flowerColors[Math.floor(Math.random()*3)]
+})
+
+}
+
+/* ================= FIREWORK ================= */
+
+let rockets=[]
+let sparks=[]
+let textParticles=[]
+let textVisible=false
+
+class Rocket{
+
+constructor(){
+this.x=w/2
+this.y=h-150
+this.vy=-7
+}
+
+update(){
+
+this.y+=this.vy
+
+sparks.push(new Spark(this.x,this.y))
+
+if(this.y<h/2){
+
+explode(this.x,this.y)
+return false
+
+}
+
+return true
+}
+
+draw(){
+
+ctx.fillStyle="white"
+ctx.fillRect(this.x,this.y,3,10)
+
+}
+
+}
+
+class Spark{
+
+constructor(x,y){
+
+this.x=x
+this.y=y
+
+this.vx=(Math.random()-.5)*6
+this.vy=(Math.random()-.5)*6
+
+this.life=80
+
+}
+
+update(){
+
+this.x+=this.vx
+this.y+=this.vy
+this.life--
+
+}
+
+draw(){
+
+ctx.fillStyle="#ffd94a"
+
+ctx.shadowColor="#ffd94a"
+ctx.shadowBlur=20
+
+ctx.fillRect(this.x,this.y,3,3)
+
+ctx.shadowBlur=0
+
+}
+
+}
+
+class TextParticle{
+
+constructor(x,y){
+
+this.x=Math.random()*w
+this.y=h
+
+this.tx=x
+this.ty=y
+
+}
+
+update(){
+
+this.x+=(this.tx-this.x)*0.05
+this.y+=(this.ty-this.y)*0.05
+
+}
+
+draw(){
+
+ctx.fillStyle="#ffd94a"
+ctx.fillRect(this.x,this.y,3,3)
+
+}
+
+}
+
+function explode(x,y){
+
+for(let i=0;i<200;i++){
+
+sparks.push(new Spark(x,y))
+
+}
+
+createText()
+
+}
+
+function createText(){
+
+textParticles=[]
+textVisible=true
+
+let t=document.createElement("canvas")
+let tc=t.getContext("2d")
+
+t.width=w
+t.height=h
+
+tc.fillStyle="white"
+tc.font="bold 70px monospace"
+tc.textAlign="center"
+
+tc.fillText("HAPPY BIRTHDAY",w/2,h/3)
+
+let data=tc.getImageData(0,0,w,h).data
+
+for(let y=0;y<h;y+=6){
+for(let x=0;x<w;x+=6){
+
+let i=(y*w+x)*4
+
+if(data[i+3]>150){
+
+textParticles.push(new TextParticle(x,y))
+
+}
+
+}
+}
+
+setTimeout(()=>{
+
+textParticles=[]
+textVisible=false
+
+},6000)
+
+}
+
+/* ================= BENCH CLICK ================= */
+
+document.getElementById("benchBtn").onclick=()=>{
+
+rockets.push(new Rocket())
+
+}
+
+/* ================= DRAW ================= */
+
+let wind=0
+
+function draw(){
+
+ctx.clearRect(0,0,w,h)
+
+/* sky */
+
+let g=ctx.createLinearGradient(0,0,0,h)
+g.addColorStop(0,"#000015")
+g.addColorStop(1,"#001033")
+
+ctx.fillStyle=g
+ctx.fillRect(0,0,w,h)
+
+/* stars */
+
+ctx.fillStyle="white"
+
+stars.forEach(s=>{
+ctx.fillRect(s.x,s.y,2,2)
+s.x+=s.speed
+if(s.x>w)s.x=0
+})
+
+/* moon */
+
+let mx=w-120
+let my=100
+
+ctx.fillStyle="#f4f1c9"
+
+for(let x=-18;x<18;x++){
+for(let y=-18;y<18;y++){
+
+if(x*x+y*y<18*18){
+
+ctx.fillRect(mx+x*3,my+y*3,3,3)
+
+}
+}
+}
+
+/* ground */
+
+ctx.fillStyle="#0e2e1f"
+ctx.fillRect(0,h-120,w,120)
+
+/* grass */
+
+wind+=0.03
+
+ctx.strokeStyle="#2ecc71"
+
+grass.forEach(g=>{
+
+let sway=Math.sin(wind+g.offset)*2
+
+ctx.beginPath()
+ctx.moveTo(g.x,h-120)
+ctx.lineTo(g.x+sway,h-120-g.height)
+ctx.stroke()
+
+})
+
+/* flowers */
+
+flowers.forEach(f=>{
+
+let y=h-120
+
+ctx.fillStyle=f.color
+ctx.fillRect(f.x,y-6,4,4)
+
+ctx.fillStyle="#2ecc71"
+ctx.fillRect(f.x+1,y-2,2,4)
+
+})
+
+/* bench */
+
+ctx.fillStyle="#8b5a2b"
+
+ctx.fillRect(w/2-50,h-140,100,10)
+ctx.fillRect(w/2-45,h-130,90,10)
+
+ctx.fillRect(w/2-45,h-120,10,25)
+ctx.fillRect(w/2+35,h-120,10,25)
+
+/* rockets */
+
+rockets=rockets.filter(r=>{
+r.draw()
+return r.update()
+})
+
+sparks=sparks.filter(s=>{
+s.draw()
+s.update()
+return s.life>0
+})
+
+textParticles.forEach(p=>{
+p.update()
+p.draw()
+})
+
+requestAnimationFrame(draw)
+
+}
+
+function initScene(){
+draw()
+}
+
+</script>
+
+</body>
+</html>
